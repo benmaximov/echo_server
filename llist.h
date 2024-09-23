@@ -24,6 +24,7 @@ class LList
         inline int Tail() { return tail; }
         inline int Next(int pos) { return next[pos]; }
         inline int Prev(int pos) { return prev[pos]; }
+        inline int Count() { return count; }
         bool ValidItemAtPos(int pos);
 };
 

@@ -2,6 +2,8 @@
 
 #include <stdio.h>
 
+
+
 template <int SIZE>
 class LList
 {

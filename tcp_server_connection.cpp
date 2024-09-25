@@ -25,11 +25,11 @@ void *Connection::clientLoop(void *param)
 
         if (recv_sz < 0)
         {
-            //if the error is due to non-blocking or some other signal, continue
+            // if the error is due to non-blocking or some other signal, continue
             if (errno == EWOULDBLOCK || errno == EAGAIN || errno == EINTR)
                 continue;
 
-            //real error
+            // real error
             perror("socket receive");
             close(conn->socket);
             break;
@@ -41,7 +41,8 @@ void *Connection::clientLoop(void *param)
             {
                 message[message_len] = 0;
                 printf("%d> %s\n", conn->pos, message);
-                conn->server->ProcessMessagePtr(conn, (char *)message, message_len);
+                if (conn->server->ProcessMessagePtr)
+                    conn->server->ProcessMessagePtr(conn, (char *)message, message_len);
                 message_len = 0;
             }
             else if (message_len < RECV_MESSAGE_SIZE - 1)

@@ -183,9 +183,7 @@ void *TCPServer::serverLoop(void *param)
 
 void TCPServer::connectionComplete(Connection *conn)
 {
-    if (connections_list.ValidItemAtPos(conn->pos))
-        connections_list.RemoveAt(conn->pos);
-
+    connections_list.RemoveAt(conn->pos);
     conn->pos = -1;
 }
 
@@ -284,5 +282,6 @@ int TCPServer::getMessageCount()
 
 void TCPServer::incMessageCount()
 {
-    message_count++;
+    lock(message_count_lock)
+        message_count++;
 }

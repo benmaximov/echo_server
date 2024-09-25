@@ -1,11 +1,10 @@
 #pragma once
 
-#include "llist.h"
+#include "llist_safe.h"
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <string.h>
-#include <pthread.h>
 #include <fcntl.h>
 #include <poll.h>
 #include <errno.h>
@@ -49,48 +48,50 @@ class TCPServer
         pthread_t server_thread = 0;
         int tcp_port;
         int bindAddr;
-        int message_count = 0;
 
+        //low-level methods
         bool makeSocket();
         bool setReuseAddr();
         bool bindToEP();
         bool listenOnSocket();
-
+        void acceptClient();
+        inline bool isSocketClosed() { return server_sock == -1; }
         static bool setNonBlockingMode(int& socket);
-        static void* serverLoop(void*);
 
+        //high-level methods
         bool setupSocket();
         void closeSocket();
-        inline bool isSocketClosed() { return server_sock == -1; }
 
-        void acceptClient();
-        pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+        //server thread
+        static void* serverLoop(void*);
+
+        pthread_mutex_t message_count_lock = PTHREAD_MUTEX_INITIALIZER;
+        int message_count = 0;
 
     private:
         //used from Connection struct
-
         friend struct Connection;
         void connectionComplete(Connection* conn);
         static bool pollOnSocket(int socket, int timeout_ms);
 
     public:
         //used from outside
-
         int getConnectionCount();
         int getMessageCount();
         void incMessageCount();
 
 
     public:
-
-        void (*ProcessMessagePtr)(Connection* conn, char *, int);
-
         bool running = false;
 
+        //config values
         int backlog = 10;
         bool reuse_address = true;
         bool closeOnMaxConnections = true;
+        //message processing function
+        void (*ProcessMessagePtr)(Connection* conn, char *, int) = NULL;
 
+        //control methods
         bool SetupListening(int port, int addr = INADDR_ANY);
         bool Start();
         bool Stop();

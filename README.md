@@ -24,7 +24,7 @@ This design ensures that the server remains responsive and can easily adapt to n
     compiling and running:
     <pre>
         make
-        ./echo_server [-p&lttcp_port%gt] [-d]</pre>
+        ./echo_server [-p&lt;tcp_port%gt;] [-d]</pre>
 
     the default port is TCP:2121
     - -p option is for setting another TCP port

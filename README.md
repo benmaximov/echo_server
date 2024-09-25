@@ -18,7 +18,7 @@ This design ensures that the server remains responsive and can easily adapt to n
 
 # Setup instructions
 
-1. The project is compiled under Linux OS with `g++` compiler.
+1. The project is compiled under x86_64 Linux with `g++` compiler
     the project can be built with `make`
 
     compiling and running:
@@ -45,3 +45,11 @@ This design ensures that the server remains responsive and can easily adapt to n
         make testing
         ./tcp_server_testing</pre>
 
+# Summary of design decisions
+
+- multi-threading - chosen because of the requirement to handle multiple simultaneous connections. Benefits - code is easier to read and modify, the software is more responsive. Drawbacks - some common execution contexts has to be isolated with mutex locks.
+- double linked-list for the connection pool - used to keep track of the connection resources and active connections count. Fast `add` and `remove` times of O(1).
+- non-blocking sockets
+- external message processing function
+- fixed message size limit
+- SO_REUSEADDR option

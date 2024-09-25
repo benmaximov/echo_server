@@ -1,6 +1,7 @@
 #include "tcp_server.h"
 #include <stdlib.h>
 
+#define ECHO_TCP_PORT   2121
 //------------------------------------------------------------------------------------
 //message processor for clent messages
 
@@ -23,8 +24,6 @@ void processMessage(Connection* conn, char *message, int message_len)
     }
     else
     {
-        conn->message_count++;
-        conn->server->incMessageCount();
         conn->sendMessage("%s\n", message);
     }
 }
@@ -35,12 +34,16 @@ void processMessage(Connection* conn, char *message, int message_len)
 int main(int argc, char *argv[])
 {
     TCPServer server;
-    int port = 2121; //default port number is TCP:2121
+    int port = ECHO_TCP_PORT; //default port number is TCP:2121
 
     //check args for overriding
     for (int i = 1; i < argc; i++)
+    {
         if (!strncmp(argv[i], "-p", 2))
             port = atoi(argv[i] + 2);
+        if (!strcmp(argv[i], "-d"))
+            server.debug_printing = true;
+    }
 
     //check if port number is valid
     if (port < 1 || port > 0xFFFF)

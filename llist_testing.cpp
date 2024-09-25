@@ -39,9 +39,9 @@ TEST(LList, Support2) {
     EXPECT_EQ(list.RemoveAt(99), false);
 }
 
-void* runner(void* arg) {
-    LList<10000>* llist = (LList<10000>*)arg;
-    for (int i = 0; i < 1000; i++)
+void* adding_routine(void* arg) {
+    LList<1000>* llist = (LList<1000>*)arg;
+    for (int i = 0; i < 100; i++)
     {
         usleep(100);
         llist->AddPos();
@@ -49,16 +49,34 @@ void* runner(void* arg) {
     return NULL;
 }
 
+void* removing_routine(void* arg) {
+    LList<1000>* llist = (LList<1000>*)arg;
+    for (int i = 0; i < 1000; i++)
+    {
+        usleep(100);
+        llist->RemoveAt(i);
+    }
+    return NULL;
+}
+
 TEST(LList, ThreadSafetyTest) {
-    LList<10000> llist;
+    LList<1000> llist;
 
     pthread_t thread[10];
     for (int i = 0; i < 10; i++)
-        pthread_create(&thread[i], NULL, runner, &llist);
+        pthread_create(&thread[i], NULL, adding_routine, &llist);
 
     void *retVal;
     for (int i = 0; i < 10; i++)
         pthread_join(thread[i], &retVal);
 
     EXPECT_EQ(llist.Count(), 1000);
+
+    for (int i = 0; i < 10; i++)
+        pthread_create(&thread[i], NULL, removing_routine, &llist);
+
+    for (int i = 0; i < 10; i++)
+        pthread_join(thread[i], &retVal);
+
+    EXPECT_EQ(llist.Count(), 0);
 }

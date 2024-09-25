@@ -48,11 +48,11 @@ void LList<SIZE>::Reset()
 template <int SIZE>
 int LList<SIZE>::AddPos()
 {
-    //pthread_mutex_lock(&access_lock);
+    pthread_mutex_lock(&access_lock);
 
     if (count == SIZE)
     {
-        //pthread_mutex_unlock(&access_lock);
+        pthread_mutex_unlock(&access_lock);
         return -1;
     }
 
@@ -69,7 +69,7 @@ int LList<SIZE>::AddPos()
 
     count++;
 
-    //pthread_mutex_unlock(&access_lock);
+    pthread_mutex_unlock(&access_lock);
 
     return pos;
 }

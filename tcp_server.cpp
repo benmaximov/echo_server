@@ -144,7 +144,8 @@ void *TCPServer::serverLoop(void *param)
         {
             if (!server->isSocketClosed() && server->closeOnMaxConnections)
             {
-                fprintf(stderr, "too many active connections\n");
+                if (server->debug_printing)
+                    fprintf(stderr, "too many active connections\n");
                 server->closeSocket();
             }
 
@@ -166,10 +167,10 @@ void *TCPServer::serverLoop(void *param)
         server->acceptClient();
     }
 
-    //closing the listening socket
+    // closing the listening socket
     server->closeSocket();
 
-    //close all connections and wait their threads
+    // close all connections and wait their threads
     int pos = server->connections_list.Head();
     while (pos != -1)
     {
@@ -231,7 +232,8 @@ void TCPServer::acceptClient()
         return;
     }
 
-    printf("%d] client accepted %s:%d\n", pos, conn->remote_addr, conn->remote_port);
+    if (debug_printing)
+        printf("%d] client accepted %s:%d\n", pos, conn->remote_addr, conn->remote_port);
 }
 
 bool TCPServer::Start()
@@ -263,25 +265,13 @@ bool TCPServer::Stop()
 
 void TCPServer::WaitServer()
 {
-    if (!running)
-        return;
-
     void *retVal;
     pthread_join(server_thread, &retVal);
 }
 
-int TCPServer::getConnectionCount()
-{
-    return connections_list.Count();
-}
-
-int TCPServer::getMessageCount()
-{
-    return message_count;
-}
-
 void TCPServer::incMessageCount()
 {
-    lock(message_count_lock)
-        message_count++;
+    pthread_mutex_lock(&message_count_lock);
+    message_count++;
+    pthread_mutex_unlock(&message_count_lock);
 }

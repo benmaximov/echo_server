@@ -18,7 +18,9 @@ void *Connection::clientLoop(void *param)
         if (recv_sz == 0)
         {
             // disconnected
-            printf("%d] disconnected %s:%d\n", conn->pos, conn->remote_addr, conn->remote_port);
+            if (conn->server->debug_printing)
+                printf("%d] disconnected %s:%d\n", conn->pos, conn->remote_addr, conn->remote_port);
+
             close(conn->socket);
             break;
         }
@@ -40,9 +42,18 @@ void *Connection::clientLoop(void *param)
             if (recv_buf[i] == '\r' || recv_buf[i] == '\n')
             {
                 message[message_len] = 0;
-                printf("%d> %s\n", conn->pos, message);
+
+                if (conn->server->debug_printing)
+                    printf("%d> %s\n", conn->pos, message);
+
+                //increase counters
+                conn->message_count++;
+                conn->server->incMessageCount();
+
+                //process the message with external proc
                 if (conn->server->ProcessMessagePtr)
                     conn->server->ProcessMessagePtr(conn, (char *)message, message_len);
+
                 message_len = 0;
             }
             else if (message_len < RECV_MESSAGE_SIZE - 1)
@@ -58,11 +69,11 @@ void *Connection::clientLoop(void *param)
 
 bool Connection::sendMessage(const char *format, ...)
 {
-    char send_buffer[RECV_MESSAGE_SIZE];
+    char send_buffer[RECV_MESSAGE_SIZE + 1];
 
     va_list args;
     va_start(args, format);
-    int length = vsnprintf(send_buffer, RECV_MESSAGE_SIZE, format, args);
+    int length = vsnprintf(send_buffer, RECV_MESSAGE_SIZE + 1, format, args);
     va_end(args);
     return send(socket, send_buffer, length, MSG_NOSIGNAL) > 0;
 }
@@ -87,8 +98,9 @@ void Connection::closeAndWaitConnection()
     if (!running)
         return;
 
-    printf("%d] closing...\n", pos);
-    sendMessage("shutting down...\n");
+    if (server->debug_printing)
+        printf("%d] closing...\n", pos);
+
     shutdown(socket, SHUT_RDWR);
     void *retVal;
     pthread_join(client_thread, &retVal);

@@ -76,13 +76,14 @@ class TCPServer
 
     public:
         //used from outside
-        int getConnectionCount();
-        int getMessageCount();
+        inline int getConnectionCount() { return connections_list.Count(); }
+        inline int getMessageCount() { return message_count; }
         void incMessageCount();
 
 
     public:
         bool running = false;
+        bool debug_printing = false;
 
         //config values
         int backlog = 10;

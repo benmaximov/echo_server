@@ -2,8 +2,6 @@
 
 #include <stdio.h>
 
-
-
 template <int SIZE>
 class LList
 {
@@ -13,11 +11,11 @@ class LList
         int tail;
         int firstFree;
 
-        void Reset();
         int count;
 
     public:
 
+        void Reset();
         LList() { Reset(); }
 
         int AddPos();

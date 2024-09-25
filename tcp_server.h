@@ -18,6 +18,7 @@
 
 class TCPServer;
 
+//connection holder struct
 struct Connection
 {
     char remote_addr[MAX_LENGTH_REMOTE_IP];
@@ -32,14 +33,14 @@ struct Connection
     pthread_t client_thread = 0;
 
     static void* clientLoop(void*);
-    void processMessage(char* message, int message_len);
     bool sendMessage(const char* format, ...);
+    void closeAndWaitConnection();
+    bool start();
 };
 
+//server holder class
 class TCPServer
 {
-        friend struct Connection;
-
     private:
 
         Connection connections[MAX_ACTIVE_CONNECTIONS];
@@ -51,29 +52,47 @@ class TCPServer
         int message_count = 0;
 
         bool makeSocket();
-        bool setReuseAddr(bool reuse = true);
+        bool setReuseAddr();
         bool bindToEP();
         bool listenOnSocket();
 
         static bool setNonBlockingMode(int& socket);
-        static bool pollOnSocket(int socket, int timeout_ms);
+        static void* serverLoop(void*);
 
         bool setupSocket();
         void closeSocket();
         inline bool isSocketClosed() { return server_sock == -1; }
 
-        static void* serverLoop(void*);
-
         void acceptClient();
+        pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+
+    private:
+        //used from Connection struct
+
+        friend struct Connection;
+        void connectionComplete(Connection* conn);
+        static bool pollOnSocket(int socket, int timeout_ms);
 
     public:
+        //used from outside
+
+        int getConnectionCount();
+        int getMessageCount();
+        void incMessageCount();
+
+
+    public:
+
+        void (*ProcessMessagePtr)(Connection* conn, char *, int);
+
         bool running = false;
 
-        bool reuse_address = true;
         int backlog = 10;
+        bool reuse_address = true;
         bool closeOnMaxConnections = true;
 
-        bool StartListening(int port, int addr = INADDR_ANY);
-        bool StartAccepting();
+        bool SetupListening(int port, int addr = INADDR_ANY);
+        bool Start();
         bool Stop();
+        void WaitServer();
 };

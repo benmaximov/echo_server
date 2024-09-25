@@ -1,6 +1,4 @@
 #include "tcp_server.h"
-#include <stdarg.h>
-#include <string.h>
 
 bool TCPServer::makeSocket()
 {
@@ -17,12 +15,12 @@ bool TCPServer::makeSocket()
     return true;
 }
 
-bool TCPServer::setReuseAddr(bool reuse)
+bool TCPServer::setReuseAddr()
 {
     if (server_sock == -1)
         return false;
 
-    int optval = reuse ? 1 : 0;
+    int optval = reuse_address ? 1 : 0;
     if (setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)))
     {
         perror("Error setting SO_REUSEADDR");
@@ -108,7 +106,7 @@ bool TCPServer::setupSocket()
     if (!setNonBlockingMode(server_sock))
         return false;
 
-    if (!setReuseAddr(reuse_address))
+    if (!setReuseAddr())
         return false;
 
     if (!bindToEP())
@@ -120,11 +118,10 @@ bool TCPServer::setupSocket()
     return true;
 }
 
-bool TCPServer::StartListening(int port, int addr)
+bool TCPServer::SetupListening(int port, int addr)
 {
     bindAddr = addr;
     tcp_port = port;
-    message_count = 0;
 
     return setupSocket();
 }
@@ -169,7 +166,27 @@ void *TCPServer::serverLoop(void *param)
         server->acceptClient();
     }
 
+    //closing the listening socket
+    server->closeSocket();
+
+    //close all connections and wait their threads
+    int pos = server->connections_list.Head();
+    while (pos != -1)
+    {
+        Connection *conn = &server->connections[pos];
+        conn->closeAndWaitConnection();
+        pos = server->connections_list.Head();
+    }
+
     return NULL;
+}
+
+void TCPServer::connectionComplete(Connection *conn)
+{
+    if (connections_list.ValidItemAtPos(conn->pos))
+        connections_list.RemoveAt(conn->pos);
+
+    conn->pos = -1;
 }
 
 void TCPServer::acceptClient()
@@ -192,7 +209,6 @@ void TCPServer::acceptClient()
     conn->socket = client_socket;
     conn->server = this;
     conn->message_count = 0;
-    conn->running = true;
 
     // get remote address and port
     inet_ntop(AF_INET, &client_addr.sin_addr, conn->remote_addr, MAX_LENGTH_REMOTE_IP);
@@ -204,15 +220,15 @@ void TCPServer::acceptClient()
         perror("can't set O_NONBLOCK to client socket");
         close(conn->socket);
         connections_list.RemoveAt(conn->pos);
+        usleep(100'000);
         return;
     }
 
     // start the client thread
-    if (pthread_create(&conn->client_thread, NULL, Connection::clientLoop, conn))
+    if (!conn->start())
     {
-        perror("can't run client thread");
-        connections_list.RemoveAt(pos);
         close(client_socket);
+        connections_list.RemoveAt(pos);
         usleep(100'000);
         return;
     }
@@ -220,16 +236,18 @@ void TCPServer::acceptClient()
     printf("%d] client accepted %s:%d\n", pos, conn->remote_addr, conn->remote_port);
 }
 
-bool TCPServer::StartAccepting()
+bool TCPServer::Start()
 {
     if (running)
         return true;
 
     running = true;
+    message_count = 0;
 
     if (pthread_create(&server_thread, NULL, serverLoop, this))
     {
         perror("can't run a thread");
+        running = false;
         return false;
     }
 
@@ -242,96 +260,29 @@ bool TCPServer::Stop()
         return true;
 
     running = false;
-
-    void *retVal;
-    pthread_join(server_thread, &retVal);
     return true;
 }
 
-void *Connection::clientLoop(void *param)
+void TCPServer::WaitServer()
 {
-    Connection *conn = (Connection *)param;
-    unsigned char message[RECV_MESSAGE_SIZE];
-    int message_len = 0;
+    if (!running)
+        return;
 
-    while (conn->running)
-    {
-        if (!TCPServer::pollOnSocket(conn->socket, POLL_TIMEOUT_MS))
-            continue;
-
-        unsigned char recv_buf[RECV_BUF_SIZE];
-        int recv_sz = recv(conn->socket, recv_buf, RECV_BUF_SIZE, MSG_NOSIGNAL);
-
-        if (recv_sz == 0)
-        {
-            // disconnected
-            close(conn->socket);
-            conn->server->connections_list.RemoveAt(conn->pos);
-            printf("%d] disconnected %s:%d\n", conn->pos, conn->remote_addr, conn->remote_port);
-            conn->running = false;
-            break;
-        }
-
-        if (recv_sz < 0)
-        {
-            if (errno == EWOULDBLOCK || errno == EAGAIN || errno == EINTR)
-                continue;
-            perror("socket receive");
-            close(conn->socket);
-            conn->server->connections_list.RemoveAt(conn->pos);
-            conn->running = false;
-            break;
-        }
-
-        for (int i = 0; i < recv_sz; i++)
-        {
-            if (recv_buf[i] == '\r' || recv_buf[i] == '\n')
-            {
-                message[message_len] = 0;
-                printf("%d> %s\n", conn->pos, message);
-                conn->processMessage((char*)message, message_len);
-                message_len = 0;
-            }
-            else if (message_len < RECV_MESSAGE_SIZE - 1)
-                message[message_len++] = recv_buf[i];
-        }
-    }
-
-    return NULL;
+    void *retVal;
+    pthread_join(server_thread, &retVal);
 }
 
-void Connection::processMessage(char *message, int message_len)
+int TCPServer::getConnectionCount()
 {
-    if (!strcasecmp(message, "stats"))
-    {
-        sendMessage("client count: %d\n", server->connections_list.Count());
-        sendMessage("client messages: %d\n", message_count);
-        sendMessage("server messages: %d\n", server->message_count);
-    }
-    else if (!strcasecmp(message, "close"))
-    {
-        sendMessage("Goodbye\n", message_count);
-        shutdown(socket, SHUT_RDWR);
-    }
-    else if (!strcasecmp(message, "shutdown"))
-    {
-        server->Stop();
-    }
-    else
-    {
-        message_count++;
-        server->message_count++;
-        sendMessage("%s\n", message);
-    }
+    return connections_list.Count();
 }
 
-bool Connection::sendMessage(const char *format, ...)
+int TCPServer::getMessageCount()
 {
-    char send_buffer[RECV_MESSAGE_SIZE];
+    return message_count;
+}
 
-    va_list args;
-    va_start(args, format);
-    int length = vsnprintf(send_buffer, RECV_MESSAGE_SIZE, format, args);
-    va_end(args);
-    return send(socket, send_buffer, length, MSG_NOSIGNAL) > 0;
+void TCPServer::incMessageCount()
+{
+    message_count++;
 }

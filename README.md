@@ -24,14 +24,12 @@ This design ensures that the server remains responsive and can easily adapt to n
 2. For the unit testing it is used the Google C++ Unit Testing Framework.
     prerequirements:
     <pre>
-        apt install cmake
-    </pre>
+        apt install cmake</pre>
 
     installation:
     <pre>
         apt install libgtest-dev
         cd /usr/src/gtest
         cmake .
-        make
-    </pre>
+        make</pre>
 

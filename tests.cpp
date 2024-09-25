@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "llist.h"
+#include "llist_safe.h"
 
 
 TEST(LList, Support1) {
@@ -39,5 +39,26 @@ TEST(LList, Support2) {
     EXPECT_EQ(list.RemoveAt(99), false);
 }
 
-TEST(TCPServer, Support2) {
+void* runner(void* arg) {
+    LList<10000>* llist = (LList<10000>*)arg;
+    for (int i = 0; i < 1000; i++)
+    {
+        usleep(100);
+        llist->AddPos();
+    }
+    return NULL;
+}
+
+TEST(LList, ThreadSafetyTest) {
+    LList<10000> llist;
+
+    pthread_t thread[10];
+    for (int i = 0; i < 10; i++)
+        pthread_create(&thread[i], NULL, runner, &llist);
+
+    void *retVal;
+    for (int i = 0; i < 10; i++)
+        pthread_join(thread[i], &retVal);
+
+    EXPECT_EQ(llist.Count(), 1000);
 }

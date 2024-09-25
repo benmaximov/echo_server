@@ -3,8 +3,6 @@
 #include <stdio.h>
 #include <pthread.h>
 
-#define lock(mutex) for (int _once = pthread_mutex_lock(&mutex); !_once; _once = !pthread_mutex_unlock(&mutex))
-
 template <int SIZE>
 class LList
 {
@@ -30,7 +28,6 @@ public:
     inline int Next(int pos) { return next[pos]; }
     inline int Prev(int pos) { return prev[pos]; }
     inline int Count() { return count; }
-
 };
 
 template <int SIZE>
@@ -51,26 +48,28 @@ void LList<SIZE>::Reset()
 template <int SIZE>
 int LList<SIZE>::AddPos()
 {
-    int pos;
+    //pthread_mutex_lock(&access_lock);
 
-    lock(access_lock)
+    if (count == SIZE)
     {
-        if (count == SIZE)
-            return -1;
-
-        pos = firstFree;
-        firstFree = next[firstFree];
-
-        prev[pos] = tail;
-        if (tail != -1)
-            next[tail] = pos;
-        tail = pos;
-        if (head == -1)
-            head = pos;
-        next[pos] = -1;
-
-        count++;
+        //pthread_mutex_unlock(&access_lock);
+        return -1;
     }
+
+    int pos = firstFree;
+    firstFree = next[firstFree];
+
+    prev[pos] = tail;
+    if (tail != -1)
+        next[tail] = pos;
+    tail = pos;
+    if (head == -1)
+        head = pos;
+    next[pos] = -1;
+
+    count++;
+
+    //pthread_mutex_unlock(&access_lock);
 
     return pos;
 }
@@ -90,30 +89,37 @@ bool LList<SIZE>::validItemAtPos(int pos)
 template <int SIZE>
 bool LList<SIZE>::RemoveAt(int pos)
 {
-    lock(access_lock)
+    pthread_mutex_lock(&access_lock);
+
+    if (count == 0)
     {
-        if (count == 0)
-            return false;
-
-        if (!validItemAtPos(pos))
-            return false;
-
-        if (prev[pos] == -1)
-            head = next[pos];
-        else
-            next[prev[pos]] = next[pos];
-
-        if (next[pos] == -1)
-            tail = prev[pos];
-        else
-            prev[next[pos]] = prev[pos];
-
-        prev[pos] = -1;
-        next[pos] = firstFree;
-        firstFree = pos;
-
-        count--;
+        pthread_mutex_unlock(&access_lock);
+        return false;
     }
+
+    if (!validItemAtPos(pos))
+    {
+        pthread_mutex_unlock(&access_lock);
+        return false;
+    }
+
+    if (prev[pos] == -1)
+        head = next[pos];
+    else
+        next[prev[pos]] = next[pos];
+
+    if (next[pos] == -1)
+        tail = prev[pos];
+    else
+        prev[next[pos]] = prev[pos];
+
+    prev[pos] = -1;
+    next[pos] = firstFree;
+    firstFree = pos;
+
+    count--;
+
+    pthread_mutex_unlock(&access_lock);
 
     return true;
 }

@@ -26,17 +26,14 @@ This design ensures that the server remains responsive and can easily adapt to n
         make
         ./echo_server [-p&lt;tcp_port&gt;] [-d]</pre>
 
-    the default port is TCP:2121
+    the default TCP port is 2121
     - -p option is for setting another TCP port
     - -d option is for printing debug info
 
-2. For the unit testing it is used the Google C++ Unit Testing Framework.
-    prerequirements:
-    <pre>
-        apt install cmake</pre>
-
+2. For the unit testing it is used the `Google C++ Unit Testing Framework`.
     installation:
     <pre>
+        apt install cmake
         apt install libgtest-dev
         cd /usr/src/gtest
         cmake .

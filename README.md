@@ -18,8 +18,17 @@ This design ensures that the server remains responsive and can easily adapt to n
 
 # Setup instructions
 
-1. The project is compiled under Linux OS with g++ compiler.
+1. The project is compiled under Linux OS with `g++` compiler.
     the project can be built with `make`
+
+    compiling and running:
+    <pre>
+        make
+        ./echo_server [-p<tcp_port>] [-d]</pre>
+
+    the default port is TCP:2121
+    - -p option is for setting another TCP port
+    - -d option is for printing debug info
 
 2. For the unit testing it is used the Google C++ Unit Testing Framework.
     prerequirements:
@@ -32,4 +41,9 @@ This design ensures that the server remains responsive and can easily adapt to n
         cd /usr/src/gtest
         cmake .
         make</pre>
+
+    compiling and running the unit tests:
+    <pre>
+        make testing
+        ./tcp_server_testing</pre>
 

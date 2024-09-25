@@ -1,6 +1,7 @@
 #include "tcp_server.h"
 #include <stdarg.h>
 
+// client thread
 void *Connection::clientLoop(void *param)
 {
     Connection *conn = (Connection *)param;
@@ -9,7 +10,7 @@ void *Connection::clientLoop(void *param)
 
     while (conn->running)
     {
-        if (!TCPServer::pollOnSocket(conn->socket, POLL_TIMEOUT_MS))
+        if (!TCPServer::pollForRead(conn->socket, POLL_TIMEOUT_MS))
             continue;
 
         unsigned char recv_buf[RECV_BUF_SIZE];
@@ -41,19 +42,21 @@ void *Connection::clientLoop(void *param)
         {
             if (recv_buf[i] == '\r' || recv_buf[i] == '\n')
             {
+                // null-terminate the recieved message for easier processing
                 message[message_len] = 0;
 
                 if (conn->server->debug_printing)
                     printf("%d> %s\n", conn->pos, message);
 
-                //increase counters
+                // increase counters
                 conn->message_count++;
                 conn->server->incMessageCount();
 
-                //process the message with external proc
+                // process the message with the external proc
                 if (conn->server->ProcessMessagePtr)
                     conn->server->ProcessMessagePtr(conn, (char *)message, message_len);
 
+                // reset the message counter
                 message_len = 0;
             }
             else if (message_len < RECV_MESSAGE_SIZE - 1)
@@ -67,6 +70,7 @@ void *Connection::clientLoop(void *param)
     return NULL;
 }
 
+// send messages with va_args
 bool Connection::sendMessage(const char *format, ...)
 {
     char send_buffer[RECV_MESSAGE_SIZE + 1];
@@ -75,9 +79,29 @@ bool Connection::sendMessage(const char *format, ...)
     va_start(args, format);
     int length = vsnprintf(send_buffer, RECV_MESSAGE_SIZE + 1, format, args);
     va_end(args);
-    return send(socket, send_buffer, length, MSG_NOSIGNAL) > 0;
+
+    int total_sent = 0;
+    while (total_sent < length)
+    {
+        int send_bytes = send(socket, send_buffer + total_sent, length - total_sent, MSG_NOSIGNAL);
+        if (send_bytes < 0)
+        {
+            if (errno != EWOULDBLOCK)
+                return false;
+            if (!server->pollForWrite(socket, POLL_TIMEOUT_MS))
+                return false;
+            continue;
+        }
+        if (send_bytes == 0)
+            return false;
+
+        total_sent += send_bytes;
+    }
+
+    return true;
 }
 
+// start the connection thread
 bool Connection::start()
 {
     if (running)
@@ -93,6 +117,7 @@ bool Connection::start()
     return true;
 }
 
+// close the connection and wait its thread
 void Connection::closeAndWaitConnection()
 {
     if (!running)

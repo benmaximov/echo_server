@@ -32,7 +32,7 @@ bool TCPServer::setReuseAddr()
     return true;
 }
 
-bool TCPServer::bindToEP()
+bool TCPServer::bindToEndPoint()
 {
     if (server_sock == -1)
         return false;
@@ -90,13 +90,22 @@ bool TCPServer::setNonBlockingMode(int &socket)
     return true;
 }
 
-bool TCPServer::pollOnSocket(int socket, int timeout_ms)
+bool TCPServer::pollForRead(int socket, int timeout_ms)
 {
     pollfd pfd;
     pfd.fd = socket;
     pfd.events = POLLIN;
     return poll(&pfd, 1, timeout_ms) == 1;
 }
+
+bool TCPServer::pollForWrite(int socket, int timeout_ms)
+{
+    pollfd pfd;
+    pfd.fd = socket;
+    pfd.events = POLLOUT;
+    return poll(&pfd, 1, timeout_ms) == 1;
+}
+
 
 bool TCPServer::setupSocket()
 {
@@ -109,7 +118,7 @@ bool TCPServer::setupSocket()
     if (!setReuseAddr())
         return false;
 
-    if (!bindToEP())
+    if (!bindToEndPoint())
         return false;
 
     if (!listenOnSocket())
@@ -135,6 +144,7 @@ void TCPServer::closeSocket()
     server_sock = -1;
 }
 
+//server main thread
 void *TCPServer::serverLoop(void *param)
 {
     auto server = (TCPServer *)param;
@@ -161,7 +171,7 @@ void *TCPServer::serverLoop(void *param)
                 return NULL;
             }
 
-        if (!pollOnSocket(server->server_sock, POLL_TIMEOUT_MS))
+        if (!pollForRead(server->server_sock, POLL_TIMEOUT_MS))
             continue;
 
         server->acceptClient();
@@ -271,6 +281,7 @@ void TCPServer::WaitServer()
 
 void TCPServer::incMessageCount()
 {
+    //needs to handle concurrent access for incrementing the counter
     pthread_mutex_lock(&message_count_lock);
     message_count++;
     pthread_mutex_unlock(&message_count_lock);

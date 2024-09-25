@@ -52,7 +52,7 @@ class TCPServer
         //low-level methods
         bool makeSocket();
         bool setReuseAddr();
-        bool bindToEP();
+        bool bindToEndPoint();
         bool listenOnSocket();
         void acceptClient();
         inline bool isSocketClosed() { return server_sock == -1; }
@@ -72,7 +72,8 @@ class TCPServer
         //used from Connection struct
         friend struct Connection;
         void connectionComplete(Connection* conn);
-        static bool pollOnSocket(int socket, int timeout_ms);
+        static bool pollForRead(int socket, int timeout_ms);
+        static bool pollForWrite(int socket, int timeout_ms);
 
     public:
         //used from outside

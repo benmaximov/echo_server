@@ -30,7 +30,7 @@ This design ensures that the server remains responsive and can easily adapt to n
     - -p option is for setting another TCP port
     - -d option is for printing debug info
 
-2. For the unit testing it is used the `Google C++ Unit Testing Framework`.
+2. For the unit testing it is used the [Google C++ Unit Testing Framework](https://google.github.io/googletest/).
     installation:
     <pre>
         apt install cmake

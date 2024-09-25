@@ -7,6 +7,7 @@ void *Connection::clientLoop(void *param)
     Connection *conn = (Connection *)param;
     unsigned char message[RECV_MESSAGE_SIZE];
     int message_len = 0;
+    char last_term = '\0';
 
     while (conn->running)
     {
@@ -42,6 +43,13 @@ void *Connection::clientLoop(void *param)
         {
             if (recv_buf[i] == '\r' || recv_buf[i] == '\n')
             {
+                //handle windows' line-endings
+                if (last_term == '\r' && recv_buf[i] == '\n')
+                {
+                    last_term = '\n';
+                    continue;
+                }
+
                 // null-terminate the recieved message for easier processing
                 message[message_len] = 0;
 
@@ -61,6 +69,8 @@ void *Connection::clientLoop(void *param)
             }
             else if (message_len < RECV_MESSAGE_SIZE - 1)
                 message[message_len++] = recv_buf[i];
+
+            last_term = recv_buf[i];
         }
     }
 

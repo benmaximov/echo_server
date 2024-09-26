@@ -30,7 +30,7 @@ This design ensures that the server remains responsive and can easily adapt to n
     - -p option is for setting another TCP port
     - -d option is for printing debug info
 
-2. For the unit testing, it is used the [Google C++ Unit Testing Framework](https://google.github.io/googletest/).
+2. For unit testing, it is used [Google C++ Unit Testing Framework](https://google.github.io/googletest/).
 
     installation:
     <pre>
@@ -60,7 +60,7 @@ This design ensures that the server remains responsive and can easily adapt to n
     - skip the bytes if the buffer overflows (currently the chosen option)
         - pros: buffer with predefined size, statically allocated is better for the performance. Easier data manipulation
         - cons: will trim the longer messages
-- external message processing function - can be easily replaced to change the server's purpose or add/modify additional service commands
+- external message processing function - can be easily replaced to change the server's function or add/modify additional service commands
 - SO_REUSEADDR option for the listening socket allows a quick restart of the app in the development and testing scenarios
 
 

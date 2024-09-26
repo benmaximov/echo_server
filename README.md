@@ -49,7 +49,30 @@ This design ensures that the server remains responsive and can easily adapt to n
 
 - multi-threading - chosen because of the requirement to handle multiple simultaneous connections. Benefits - code is easier to read and modify, the software is more responsive. Drawbacks - some common execution contexts has to be isolated with mutex locks.
 - double linked-list for the connection pool - used to keep track of the connection resources and active connections count. Fast `add` and `remove` times of O(1).
-- non-blocking sockets
-- external message processing function
-- fixed message size limit
-- SO_REUSEADDR option
+- non-blocking sockets - offering more control and responsiveness when forcefully closing connections
+- message size limit - there are several options when no "new-line" arrives in the designated buffer:
+    - send to the client the current chunk, and start over with empty buffer
+        - pros: no data is lost, the buffer can be smaller
+        - cons: not quite fulfilling the task, as "new-line" may never arrive
+    - extend the buffer and continue to record the data
+        - pros: it may finally get the "new-line" and do the work correctly
+        - cons: additional memory allocation could be slow, and even not guaranteed that the message will be correctly terminated
+    - skip the bytes if the buffer overflows (currently the chosen option)
+        - pros: buffer with predefined size, statically allocated is better for the performance. Easier data manipulation
+        - cons: will trim the longer messages
+- SO_REUSEADDR option for the listening socket allows a quick restart of the app in the development and testing scenarios
+
+# Testing approach
+
+- testing for the double-linked list class
+    - adding and removing items, maintaing the correct structure of the list
+    - thread-safety for adding and removing items
+    - enumeration is done in a single thread, so no thread-safety tests are implemented for it
+- testing the tcp_server class
+    - basic echo test - simple test with one connection to check the basic funcionallity
+    - empty message test - checking if empty messages are echoed correctly
+    - concurrent connections test - simultaneously activating the maximum number of allowed connections and test them with a message
+    - large message test - testing the server with the maximum allowed message length
+    - message size overflow test - testing the server with longer size than the dedicated buffer
+    - connections open&close test - opening and closing connections with larger count that the maximum allowed connections, keeping single currently open connection
+

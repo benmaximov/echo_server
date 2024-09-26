@@ -57,13 +57,13 @@ Other option could be using select/epoll on mutiple sockets.
         - cons: not quite fulfilling the task, as "new-line" may never arrive
     - extend the buffer and continue to record the data
         - pros: it may finally get the "new-line" and do the work correctly
-        - cons: additional memory allocation could be slow, and even not guaranteed that the message will be correctly terminated
+        - cons: additional memory allocation could lead to performance issues, and even not guarantee that the message will be correctly terminated
     - skip the bytes if the buffer overflows (currently the chosen option)
         - pros: buffer with predefined size, statically allocated is better for the performance. Easier data manipulation
         - cons: will trim the longer messages
 - external message processing function - can be easily replaced to change the server's function or add/modify additional service commands
 - SO_REUSEADDR option for the listening socket allows a quick restart of the app in the development and testing scenarios
-
+- error handling - potentially can lead to losing the current connection or server start failure
 
 # Testing approach
 

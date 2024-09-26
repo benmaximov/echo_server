@@ -60,7 +60,9 @@ This design ensures that the server remains responsive and can easily adapt to n
     - skip the bytes if the buffer overflows (currently the chosen option)
         - pros: buffer with predefined size, statically allocated is better for the performance. Easier data manipulation
         - cons: will trim the longer messages
+- external message processing function - can be easily replaced to change the server's purpose or add/modify additional service commands
 - SO_REUSEADDR option for the listening socket allows a quick restart of the app in the development and testing scenarios
+
 
 # Testing approach
 

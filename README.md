@@ -48,8 +48,9 @@ This design ensures that the server remains responsive and can easily adapt to n
 # Summary of design decisions
 
 - multi-threading - chosen because of the requirement to handle multiple simultaneous connections. Benefits - code is easier to read and modify, the software is more responsive. Drawbacks - some common execution contexts has to be isolated with mutex locks.
+Other option could be using select/epoll on mutiple sockets.
 - double linked-list for the connection pool - used to keep track of the connection resources and active connections count. Fast `add` and `remove` times of O(1).
-- non-blocking sockets - offering more control and responsiveness when forcefully closing connections
+- non-blocking sockets - offering more control and responsiveness when forcefully closing connections. Other option could be using timeouts on the blocking sockets
 - message size limit - there are several options when no "new-line" arrives in the designated buffer:
     - send to the client the current chunk, and start over with empty buffer
         - pros: no data is lost, the buffer can be smaller

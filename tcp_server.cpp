@@ -70,6 +70,26 @@ bool TCPServer::listenOnSocket()
     return true;
 }
 
+bool TCPServer::setNonBlockingMode(int &socket)
+{
+    int flags = fcntl(socket, F_GETFL, 0);
+    if (flags < 0)
+    {
+        perror("can't get socket flags");
+        close(socket);
+        socket = -1;
+        return false;
+    }
+    if (fcntl(socket, F_SETFL, flags | O_NONBLOCK))
+    {
+        perror("can't set socket flag O_NONBLOCK");
+        close(socket);
+        socket = -1;
+        return false;
+    }
+    return true;
+}
+
 bool TCPServer::pollForRead(int socket, int timeout_ms)
 {
     pollfd pfd;
@@ -81,6 +101,9 @@ bool TCPServer::pollForRead(int socket, int timeout_ms)
 bool TCPServer::setupSocket()
 {
     if (!makeSocket())
+        return false;
+
+    if (!setNonBlockingMode(server_sock))
         return false;
 
     if (!setReuseAddr())
@@ -174,8 +197,7 @@ void TCPServer::acceptClient()
     int client_socket = accept(server_sock, (sockaddr *)&client_addr, &client_len);
     if (client_socket < 0)
     {
-        if (errno != EBADF)
-            perror("can't accept client");
+        perror("can't accept client");
 
         usleep(100'000);
         return;
@@ -228,8 +250,6 @@ bool TCPServer::Stop()
 {
     if (!running)
         return true;
-
-    close(server_sock);
 
     running = false;
     return true;

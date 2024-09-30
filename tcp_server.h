@@ -56,6 +56,7 @@ class TCPServer
         bool listenOnSocket();
         void acceptClient();
         inline bool isSocketClosed() { return server_sock == -1; }
+        static bool setNonBlockingMode(int& socket);
 
         //high-level methods
         bool setupSocket();

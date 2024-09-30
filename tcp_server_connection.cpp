@@ -48,10 +48,6 @@ void *Connection::clientLoop(void *param)
                 if (conn->server->debug_printing)
                     printf("%d> %s\n", conn->pos, message);
 
-                // increase counters
-                conn->message_count++;
-                conn->server->incMessageCount();
-
                 // process the message with the external proc
                 if (conn->server->ProcessMessagePtr)
                     conn->server->ProcessMessagePtr(conn, (char *)message, message_len);
@@ -82,15 +78,8 @@ bool Connection::sendMessage(const char *format, ...)
     int length = vsnprintf(send_buffer, RECV_MESSAGE_SIZE + 1, format, args);
     va_end(args);
 
-    int total_sent = 0;
-    while (total_sent < length)
-    {
-        int send_bytes = send(socket, send_buffer + total_sent, length - total_sent, MSG_NOSIGNAL);
-        if (send_bytes <= 0)
-            return false;
-
-        total_sent += send_bytes;
-    }
+    if (send(socket, send_buffer, length, MSG_NOSIGNAL) <= 0)
+        return false;
 
     return true;
 }

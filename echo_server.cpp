@@ -25,6 +25,9 @@ void processMessage(Connection* conn, char *message, int message_len)
     else
     {
         conn->sendMessage("%s\n", message);
+        // increase counters
+        conn->message_count++;
+        conn->server->incMessageCount();
     }
 }
 

@@ -78,22 +78,10 @@ bool TCPServer::pollForRead(int socket, int timeout_ms)
     return poll(&pfd, 1, timeout_ms) == 1;
 }
 
-bool TCPServer::pollForWrite(int socket, int timeout_ms)
-{
-    pollfd pfd;
-    pfd.fd = socket;
-    pfd.events = POLLOUT;
-    return poll(&pfd, 1, timeout_ms) == 1;
-}
-
-
 bool TCPServer::setupSocket()
 {
     if (!makeSocket())
         return false;
-
-    /*if (!setNonBlockingMode(server_sock))
-        return false;*/
 
     if (!setReuseAddr())
         return false;
@@ -124,7 +112,7 @@ void TCPServer::closeSocket()
     server_sock = -1;
 }
 
-//server main thread
+// server main thread
 void *TCPServer::serverLoop(void *param)
 {
     auto server = (TCPServer *)param;
@@ -186,7 +174,9 @@ void TCPServer::acceptClient()
     int client_socket = accept(server_sock, (sockaddr *)&client_addr, &client_len);
     if (client_socket < 0)
     {
-        perror("can't accept client");
+        if (errno != EBADF)
+            perror("can't accept client");
+
         usleep(100'000);
         return;
     }
@@ -253,7 +243,7 @@ void TCPServer::WaitServer()
 
 void TCPServer::incMessageCount()
 {
-    //needs to handle concurrent access for incrementing the counter
+    // needs to handle concurrent access for incrementing the counter
     pthread_mutex_lock(&message_count_lock);
     message_count++;
     pthread_mutex_unlock(&message_count_lock);

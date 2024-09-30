@@ -72,7 +72,6 @@ class TCPServer
         friend struct Connection;
         void connectionComplete(Connection* conn);
         static bool pollForRead(int socket, int timeout_ms);
-        static bool pollForWrite(int socket, int timeout_ms);
 
     public:
         //used from outside

@@ -86,15 +86,7 @@ bool Connection::sendMessage(const char *format, ...)
     while (total_sent < length)
     {
         int send_bytes = send(socket, send_buffer + total_sent, length - total_sent, MSG_NOSIGNAL);
-        if (send_bytes < 0)
-        {
-            if (errno != EWOULDBLOCK)
-                return false;
-            if (!server->pollForWrite(socket, POLL_TIMEOUT_MS))
-                return false;
-            continue;
-        }
-        if (send_bytes == 0)
+        if (send_bytes <= 0)
             return false;
 
         total_sent += send_bytes;

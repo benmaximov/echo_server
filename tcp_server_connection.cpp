@@ -11,9 +11,6 @@ void *Connection::clientLoop(void *param)
 
     while (conn->running)
     {
-        if (!TCPServer::pollForRead(conn->socket, POLL_TIMEOUT_MS))
-            continue;
-
         unsigned char recv_buf[RECV_BUF_SIZE];
         int recv_sz = recv(conn->socket, recv_buf, RECV_BUF_SIZE, MSG_NOSIGNAL);
 
@@ -29,11 +26,6 @@ void *Connection::clientLoop(void *param)
 
         if (recv_sz < 0)
         {
-            // if the error is due to non-blocking or some other signal, continue
-            if (errno == EWOULDBLOCK || errno == EAGAIN || errno == EINTR)
-                continue;
-
-            // real error
             perror("socket receive");
             close(conn->socket);
             break;

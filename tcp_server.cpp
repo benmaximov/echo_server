@@ -70,26 +70,6 @@ bool TCPServer::listenOnSocket()
     return true;
 }
 
-bool TCPServer::setNonBlockingMode(int &socket)
-{
-    int flags = fcntl(socket, F_GETFL, 0);
-    if (flags < 0)
-    {
-        perror("can't get socket flags");
-        close(socket);
-        socket = -1;
-        return false;
-    }
-    if (fcntl(socket, F_SETFL, flags | O_NONBLOCK))
-    {
-        perror("can't set socket flag O_NONBLOCK");
-        close(socket);
-        socket = -1;
-        return false;
-    }
-    return true;
-}
-
 bool TCPServer::pollForRead(int socket, int timeout_ms)
 {
     pollfd pfd;
@@ -112,8 +92,8 @@ bool TCPServer::setupSocket()
     if (!makeSocket())
         return false;
 
-    if (!setNonBlockingMode(server_sock))
-        return false;
+    /*if (!setNonBlockingMode(server_sock))
+        return false;*/
 
     if (!setReuseAddr())
         return false;
@@ -223,16 +203,6 @@ void TCPServer::acceptClient()
     inet_ntop(AF_INET, &client_addr.sin_addr, conn->remote_addr, MAX_LENGTH_REMOTE_IP);
     conn->remote_port = client_addr.sin_port;
 
-    // set non-blocking mode
-    if (!setNonBlockingMode(conn->socket))
-    {
-        perror("can't set O_NONBLOCK to client socket");
-        close(conn->socket);
-        connections_list.RemoveAt(conn->pos);
-        usleep(100'000);
-        return;
-    }
-
     // start the client thread
     if (!conn->start())
     {
@@ -268,6 +238,8 @@ bool TCPServer::Stop()
 {
     if (!running)
         return true;
+
+    close(server_sock);
 
     running = false;
     return true;
